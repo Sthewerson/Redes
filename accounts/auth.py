@@ -1,7 +1,7 @@
 from accounts.models import User
 from django.contrib.auth import check_password, make_password
 
-class Autentication:
+class Authentication:
     def signin(self, email: str, password: str,) -> User | bool:
         user = User.objects.filter(email=email).first()
 
