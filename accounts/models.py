@@ -20,7 +20,7 @@ class User(AbstractBaseUser):
     name = models.CharField(max_length=88)
     email = models.EmailField(unique=True)
     is_superuser = models.BooleanField(default=False)
-    last_aceess = models.DateTimeField(auto_now_add=True)
+    last_access = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
 

@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import AuthenticationFailed
 
-# Create your views here.
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from django.utils.timezone import now
@@ -18,7 +17,8 @@ from core.utils.exceptions import ValidationError
 
 import uuid
 
-class SignInView(APIView,Authentication):
+
+class SignInView(APIView, Authentication):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -34,9 +34,10 @@ class SignInView(APIView,Authentication):
         access_token = RefreshToken.for_user(signin).access_token
 
         return Response({
-            'user': user,
-            'access_token': str(access_token)
+            "user": user,
+            "access_token": str(access_token)
         })
+
 
 class SignUpView(APIView, Authentication):
     permission_classes = [AllowAny]
@@ -58,71 +59,72 @@ class SignUpView(APIView, Authentication):
         access_token = RefreshToken.for_user(signup).access_token
 
         return Response({
-            'user': user,
-            'access_token': str(access_token)
+            "user": user,
+            "access_token": str(access_token)
         })
 
-    class UserView(APIView):
-      def get(self, request):
-          # Update last_access
-          User.objects.filter(id=request.user.id).update(last_access=now())
 
-          user = UserSerializer(request.user).data
+class UserView(APIView):
+    def get(self, request):
+        # Update last_access
+        User.objects.filter(id=request.user.id).update(last_access=now())
 
-          return Response({
-              "user": user
-          })
+        user = UserSerializer(request.user).data
 
-      def put(self, request):
-          name = request.data.get('name')
-          email = request.data.get('email')
-          password = request.data.get('password')
-          avatar = request.FILES.get('avatar')
+        return Response({
+            "user": user
+        })
 
-          # Initialize storage
-          storage = FileSystemStorage(
-              settings.MEDIA_ROOT / "avatars",
-              settings.MEDIA_URL + "avatars"
-          )
+    def put(self, request):
+        name = request.data.get('name')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        avatar = request.FILES.get('avatar')
 
-          if avatar:
-              content_type = avatar.content_type
-              extension = avatar.name.split('.')[-1]
+        # Initialize storage
+        storage = FileSystemStorage(
+            settings.MEDIA_ROOT / "avatars",
+            settings.MEDIA_URL + "avatars"
+        )
 
-              # Validate avatar
-              if not content_type == "image/png" and not content_type == "image/jpeg":
-                  raise ValidationError(
-                      "Somente arquivos do tipo PNG ou JPEG são suportados")
+        if avatar:
+            content_type = avatar.content_type
+            extension = avatar.name.split('.')[-1]
 
-              # Save new avatar
-              file = storage.save(f"{uuid.uuid4()}.{extension}", avatar)
-              avatar = storage.url(file)
+            # Validate avatar
+            if not content_type == "image/png" and not content_type == "image/jpeg":
+                raise ValidationError(
+                    "Somente arquivos do tipo PNG ou JPEG são suportados")
 
-          serializer = UserSerializer(request.user, data={
-              "name": name,
-              "email": email,
-              "avatar": avatar or request.user.avatar
-          })
+            # Save new avatar
+            file = storage.save(f"{uuid.uuid4()}.{extension}", avatar)
+            avatar = storage.url(file)
 
-          if not serializer.is_valid():
-              # Delete uploaded file
-              if avatar:
-                  storage.delete(avatar.split("/")[-1])
+        serializer = UserSerializer(request.user, data={
+            "name": name,
+            "email": email,
+            "avatar": avatar or request.user.avatar
+        })
 
-              first_error = list(serializer.errors.values())[0][0]
+        if not serializer.is_valid():
+            # Delete uploaded file
+            if avatar:
+                storage.delete(avatar.split("/")[-1])
 
-              raise ValidationError(first_error)
+            first_error = list(serializer.errors.values())[0][0]
 
-          # Delete old avatar
-          if avatar and request.user.avatar != "/media/avatars/default-avatar.png":
-              storage.delete(request.user.avatar.split("/")[-1])
+            raise ValidationError(first_error)
 
-          # Update password
-          if password:
-              request.user.set_password(password)
+        # Delete old avatar
+        if avatar and request.user.avatar != "/media/avatars/default-avatar.png":
+            storage.delete(request.user.avatar.split("/")[-1])
 
-          serializer.save()
+        # Update password
+        if password:
+            request.user.set_password(password)
 
-          return Response({
-              "user": serializer.data
+        serializer.save()
+
+        return Response({
+            "user": serializer.data
         })
