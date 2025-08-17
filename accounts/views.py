@@ -76,55 +76,65 @@ class UserView(APIView):
         })
 
     def put(self, request):
-        name = request.data.get('name')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        avatar = request.FILES.get('avatar')
+    # Coleta os dados (podem vir ausentes)
+        name = request.data.get('name', None)
+        email = request.data.get('email', None)
+        password = request.data.get('password', None)
+        avatar_file = request.FILES.get('avatar', None)
 
-        # Initialize storage
         storage = FileSystemStorage(
             settings.MEDIA_ROOT / "avatars",
             settings.MEDIA_URL + "avatars"
         )
 
-        if avatar:
-            content_type = avatar.content_type
-            extension = avatar.name.split('.')[-1]
+        old_avatar_url = request.user.avatar
+        new_avatar_url = None
 
-            # Validate avatar
-            if not content_type == "image/png" and not content_type == "image/jpeg":
-                raise ValidationError(
-                    "Somente arquivos do tipo PNG ou JPEG são suportados")
+        # Upload opcional do avatar
+        if avatar_file:
+            content_type = avatar_file.content_type
+            ext = avatar_file.name.split('.')[-1].lower()
 
-            # Save new avatar
-            file = storage.save(f"{uuid.uuid4()}.{extension}", avatar)
-            avatar = storage.url(file)
+            if content_type not in ("image/png", "image/jpeg"):
+                raise ValidationError("Somente arquivos do tipo PNG ou JPEG são suportados")
 
-        serializer = UserSerializer(request.user, data={
-            "name": name,
-            "email": email,
-            "avatar": avatar or request.user.avatar
-        })
+            saved_name = storage.save(f"{uuid.uuid4()}.{ext}", avatar_file)
+            new_avatar_url = storage.url(saved_name)
+
+        # Monte apenas os campos que realmente vieram
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if email is not None:
+            data["email"] = email
+        if new_avatar_url is not None:
+            data["avatar"] = new_avatar_url
+
+        serializer = UserSerializer(request.user, data=data, partial=True)
 
         if not serializer.is_valid():
-            # Delete uploaded file
-            if avatar:
-                storage.delete(avatar.split("/")[-1])
-
+            # rollback do upload se falhar
+            if new_avatar_url:
+                try:
+                    storage.delete(new_avatar_url.split("/")[-1])
+                except Exception:
+                    pass
             first_error = list(serializer.errors.values())[0][0]
-
             raise ValidationError(first_error)
 
-        # Delete old avatar
-        if avatar and request.user.avatar != "/media/avatars/default-avatar.png":
-            storage.delete(request.user.avatar.split("/")[-1])
+        # Salva campos básicos
+        user = serializer.save()
 
-        # Update password
+        # Atualiza senha, se enviada
         if password:
-            request.user.set_password(password)
+            user.set_password(password)
+            user.save()
 
-        serializer.save()
+        # Remove avatar antigo se trocou e não for o padrão
+        if new_avatar_url and old_avatar_url != "/media/avatars/default-avatar.png":
+            try:
+                storage.delete(old_avatar_url.split("/")[-1])
+            except Exception:
+                pass
 
-        return Response({
-            "user": serializer.data
-        })
+        return Response({"user": UserSerializer(user).data})
