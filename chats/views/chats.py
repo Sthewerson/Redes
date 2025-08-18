@@ -9,31 +9,32 @@ from chats.serializers import ChatSerializer
 
 from core.socket import socket
 
+
 class ChatsView(BaseView):
     def get(self, request):
         chats = Chat.objects.filter(
-            Q(from_user=request.user.id) | Q(to_user=request.user.id),
+            Q(from_user_id=request.user.id) | Q(to_user_id=request.user.id),
             deleted_at__isnull=True
         ).order_by('-viewed_at').all()
 
         serializer = ChatSerializer(
             chats,
-            context={"user_id": request.user.id},
-            many=True,
+            context={'user_id': request.user.id},
+            many=True
         )
 
         return Response({
-            "chats": serializer.data
+            'chats': serializer.data
         })
 
     def post(self, request):
-        email = request.data.get("email")
+        email = request.data.get('email')
 
         # Getting user
         user = self.get_user(email=email)
 
         # Checking if chat already exists
-        chat = self.has_existing_chat(request.user.id, to_user=user.id)
+        chat = self.has_existing_chat(user_id=request.user.id, to_user=user.id)
 
         # Creating chat
         if not chat:
@@ -45,25 +46,25 @@ class ChatsView(BaseView):
 
             chat = ChatSerializer(
                 chat,
-                context={"user_id": request.user.id}
+                context={'user_id': request.user.id}
             ).data
 
-
-            # Sendind chat to user
+            # Sending chat to user
             socket.emit('update_chat', {
                 "query": {
-                    "users": [request.user.id, user.id],
+                    "users": [request.user.id, user.id]
                 }
             })
 
         return Response({
-            "chat": chat
+            'chat': chat
         })
+
 
 class ChatView(BaseView):
     def delete(self, request, chat_id):
         # Checking if chat belongs to user
-        chat = self.chat_belongs_to_user(
+        chat = self.is_chat_belong_to_user(
             user_id=request.user.id,
             chat_id=chat_id
         )

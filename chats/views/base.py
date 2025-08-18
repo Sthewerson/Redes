@@ -31,7 +31,7 @@ class BaseView(APIView):
             return ChatSerializer(chat, context={"user_id": user_id} ).data
 
     #checking if chat  belong user or not
-    def is_chat_belong_to_user(self, chat_id, user_id) -> Chat | None:
+    def is_chat_belong_to_user(self, chat_id, user_id) -> Chat| None:
         chat = Chat.objects.filter(
             Q(from_user=user_id) | Q(to_user=user_id),
             id=chat_id,

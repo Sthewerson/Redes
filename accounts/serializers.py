@@ -8,7 +8,7 @@ from accounts.models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'avatar', 'name', 'email', 'is_superuser', 'last_access']
+        fields = ['id', 'avatar', 'name', 'email', 'last_access']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
