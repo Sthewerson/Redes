@@ -19,7 +19,7 @@ import uuid
 class ChatMessagesView(BaseView):
     def get(self, request, chat_id):
         # Checking if chat belongs to user
-        chat = self.chat_belongs_to_user(
+        chat = self.is_chat_belong_to_user(
             user_id=request.user.id,
             chat_id=chat_id
         )
@@ -60,7 +60,7 @@ class ChatMessagesView(BaseView):
         audio = request.FILES.get('audio')
 
         # Checking if chat belongs to user
-        chat = self.chat_belongs_to_user(
+        chat = self.is_chat_belong_to_user(
             user_id=request.user.id,
             chat_id=chat_id
         )
@@ -154,7 +154,7 @@ class ChatMessagesView(BaseView):
 class ChatMessageView(BaseView):
     def delete(self, request, chat_id, message_id):
         # Checking if chat belongs to user
-        chat = self.chat_belongs_to_user(
+        chat = self.is_chat_belong_to_user(
             user_id=request.user.id,
             chat_id=chat_id
         )

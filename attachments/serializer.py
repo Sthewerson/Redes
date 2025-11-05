@@ -12,7 +12,7 @@ class FileAttachmentSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['size'] = Formatter.format_sbytes(instance.size)
+        data['size'] = Formatter.format_byte(instance.size)
         data['src'] = f"{settings.CURRENT_URL}{instance.src}"
 
         return data

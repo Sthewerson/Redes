@@ -6,7 +6,7 @@ class FileAttachment(models.Model):
     extension = models.CharField(max_length=15)
     size = models.FloatField()
     src = models.TextField()
-    created_at = models.CharField(max_length=45)
+    content_type = models.CharField(max_length=45)
 
     class Meta:
         db_table = 'file_attachments'
